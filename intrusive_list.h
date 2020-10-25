@@ -219,10 +219,11 @@ namespace intrusive {
             list_element<Tag> const &ll = *itr;
             auto &next_element = const_cast<list_element<Tag> &>(ll);
             list_element<Tag> &element = el;
-            element.prev = next_element.prev;
-            element.prev->next = next_element.prev = &element;
-            element.next = &next_element;
-            return iterator(element);
+            return insert_before(next_element, element);
+//            element.prev = next_element.prev;
+//            element.prev->next = next_element.prev = &element;
+//            element.next = &next_element;
+//            return iterator(element);
         }
 
         iterator erase(const_iterator itr) noexcept {
@@ -241,12 +242,24 @@ namespace intrusive {
             }
         }
 
+        void insert_before_element(T &element_after_inserted, T &element) {
+            list_element<Tag> &el = element_after_inserted;
+            insert_before(el, element);
+        }
+
+        iterator insert_before(list_element<Tag>  & next_element, list_element<Tag> & element) {
+            element.prev = next_element.prev;
+            element.prev->next = next_element.prev = &element;
+            element.next = &next_element;
+            return iterator(element);
+        }
+
     private :
 
-        void take_head_from(list & other){
+        void take_head_from(list &other) {
             head.next = other.head.next;
             head.prev = other.head.prev;
-            head.next->prev =  head.prev->next = &head;
+            head.next->prev = head.prev->next = &head;
             other.make_empty_head();
         }
 
