@@ -18,6 +18,7 @@ namespace signals {
         using slot_t = std::function<void(Args...)>;
 
         struct connection : intrusive::list_element<connection_tag> {
+
             connection() noexcept = default;
 
             connection(signal *sig, slot_t slot) noexcept: sig(sig), slot(std::move(slot)) {
@@ -33,11 +34,7 @@ namespace signals {
             connection &operator=(connection const &) = delete;
 
             connection(connection &&other) noexcept: sig(other.sig), slot(std::move(other.slot)) {
-                if (sig != nullptr) {
-                    sig->connections.insert_before_element(other, *this);
-                }
-                other.disconnect();
-                other.sig = nullptr;
+                move_constructor(other);
             }
 
             connection &operator=(connection &&other) noexcept {
@@ -45,10 +42,7 @@ namespace signals {
                 disconnect();
                 sig = other.sig;
                 slot = std::move(other.slot);
-                if (sig != nullptr) {
-                    sig->connections.insert_before_element(other, *this);
-                }
-                other.disconnect();
+                move_constructor(other);
                 return *this;
             }
 
@@ -68,6 +62,15 @@ namespace signals {
             friend struct signal;
 
         private:
+
+            void move_constructor(connection &other) {
+                if (sig != nullptr) {
+                    sig->connections.insert_before_element(other, *this);
+                }
+                other.disconnect();
+                other.sig = nullptr;
+            }
+
             signal *sig = nullptr;
             slot_t slot;
         };
@@ -99,7 +102,7 @@ namespace signals {
         };
 
 
-        signal()=default;
+        signal() = default;
 
         signal(signal const &) = delete;
 
@@ -119,13 +122,12 @@ namespace signals {
         }
 
         void operator()(Args... args) const {
-            for ( iteration_token current_token(this); current_token.it != connections.end(); ++current_token.it) {
+            for (iteration_token current_token(this); current_token.it != connections.end(); ++current_token.it) {
                 if (current_token.sig == nullptr)
                     return;
                 current_token.it->slot(std::forward<Args>(args) ...);
             }
         }
-
 
     private:
         connections_t connections;
