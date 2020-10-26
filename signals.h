@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <iostream>
 #include "intrusive_list.h"
 
 namespace signals {
@@ -57,6 +56,7 @@ namespace signals {
                 }
                 this->unlink();
                 sig = nullptr;
+                slot = slot_t();
             }
 
             friend struct signal;
@@ -112,8 +112,8 @@ namespace signals {
             for (iteration_token *tok = top_token; tok != nullptr; tok = tok->next) {
                 tok->sig = nullptr;
             }
-            for (auto &t : connections) {
-                t.sig = nullptr;
+            while (!connections.empty()){
+                connections.begin()->disconnect();
             }
         }
 
@@ -123,9 +123,9 @@ namespace signals {
 
         void operator()(Args... args) const {
             for (iteration_token current_token(this); current_token.it != connections.end(); ++current_token.it) {
+                current_token.it->slot(std::forward<Args>(args) ...);
                 if (current_token.sig == nullptr)
                     return;
-                current_token.it->slot(std::forward<Args>(args) ...);
             }
         }
 
